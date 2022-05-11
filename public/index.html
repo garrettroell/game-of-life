@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- from favicon generator -->
+  <link rel="apple-touch-icon" sizes="180x180" href=/meta/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/meta/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/meta/favicon-16x16.png">
+  <link rel="manifest" href="/meta/site.webmanifest">
+  <link rel="mask-icon" href="/meta/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+
+  <link rel="stylesheet" href="styles.css">
+
+  <title>Game of Life</title>
+</head>
+
+<script>
+  // ----------------------------------------------------
+  // Define top level variables
+  // ----------------------------------------------------
+
+  let squareSize = 20
+  let stepsPerSecond = 20
+  let intervalID;
+
+  // ----------------------------------------------------
+  // Define functions
+  // ----------------------------------------------------
+
+  // gets rows and cols based on window and squareSize
+  function getDimensions(window, squareSize) {
+
+    // margin value changes with window size
+    marginVal = window.innerWidth > 1000 ? 80 : 30
+
+    gameAreaWidth = squareSize * Math.floor((window.innerWidth - 2 * marginVal) / squareSize)
+    gameAreaHeight = squareSize * Math.floor((window.innerHeight - 130 - marginVal) / squareSize)
+
+    let rows = gameAreaHeight / squareSize
+    let cols = gameAreaWidth / squareSize
+
+    return [rows, cols]
+  }
+
+  // plot the grid state
+  function plotGridData(gridData, gameArea, squareSize) {
+    gameArea.innerHTML = ''
+
+    // loop over rows and make the HTML element
+    Object.keys(gridData).forEach(row => {
+      // create an object for the row
+      const gameRow = document.createElement("div");
+
+      // give the row object styles
+      gameRow.classList.add('game-row')
+      gameRow.style.minHeight = `${squareSize}px`
+      gameRow.style.maxHeight = `${squareSize}px`
+
+      // loop over columns, adding cells
+      gridData[row].forEach((colValue, col) => {
+        const cell = document.createElement("div");
+        cell.classList.add('cell')
+        cell.style.minWidth = `${squareSize}px`
+        cell.style.maxWidth = `${squareSize}px`
+
+        // color is based on position in gridData 
+        cell.style.backgroundColor = gridData[row][col] ? 'rgb(101, 166, 180)' : '#f6f1e2'
+
+
+        // update cell color and cursor when mouse is pressed down
+        cell.addEventListener('mousedown', () => {
+          cell.style.cursor = 'crosshair'
+          cell.style.backgroundColor = cell.style.backgroundColor === 'rgb(101, 166, 180)' ? '' : 'rgb(101, 166, 180)'
+          gridData[row][col] = !gridData[row][col]
+        })
+
+        // reset the cursor when user stops pressing the mouse
+        cell.addEventListener("mouseup", () => {
+          cell.style.cursor = 'pointer'
+        });
+
+        // update cell color when a pressed down cursor drags over cell
+        cell.addEventListener('mouseenter', () => {
+          if (document.body.matches(":active")) {
+            // update gridData information
+            gridData[row][col] = !gridData[row][col]
+
+            // styles
+            cell.style.backgroundColor = cell.style.backgroundColor === 'rgb(101, 166, 180)' ? '' : 'rgb(101, 166, 180)'
+            cell.style.cursor = 'crosshair'
+          }
+        })
+
+        // reset the cursor type for the next time the cursor enters this cell
+        cell.addEventListener('mouseout', () => {
+          cell.style.cursor = 'pointer'
+        })
+        gameRow.appendChild(cell)
+      })
+      gameArea.appendChild(gameRow)
+    })
+  }
+
+  // set up start/stop button
+  function stopSimulation() {
+    clearInterval(intervalID);
+  }
+
+  function startSimulation(stepsPerSecond, stepButton) {
+    intervalID = setInterval(() => {
+      stepButton.click();
+    }, 1000 / stepsPerSecond);
+  }
+
+  // ----------------------------------------------------
+  // DOMContentLoaded Listener
+  // ----------------------------------------------------
+
+  window.addEventListener('DOMContentLoaded', () => {
+    // get revelent HTML objects as javascript objects
+    const gameArea = document.getElementById('game-area')
+    const startButton = document.getElementById('start-button')
+    const stepButton = document.getElementById('step-button')
+    const resetButton = document.getElementById('reset-button')
+
+    const stepSpeedSlider = document.getElementById("steps-per-second-slider");
+    const stepSpeed = document.getElementById("steps-per-second-value");
+
+    const cellSizeSlider = document.getElementById("pixels-per-cell-slider");
+    const cellSize = document.getElementById("pixels-per-cell-value");
+
+    // define initial data object
+    let gridData = {}
+
+    // get the number of rows and columns
+    const [rows, cols] = getDimensions(window, squareSize)
+
+    // get initial gridData object
+    Array.from(Array(rows).keys()).forEach(row => {
+      gridData[row] = []
+      // add individual cells
+      Array.from(Array(cols).keys()).forEach(col => {
+        gridData[row] = [...gridData[row], false]
+      })
+    })
+
+    plotGridData(gridData, gameArea, squareSize)
+
+    // redraw grid when 
+    window.addEventListener('resize', () => {
+      // drawNewGrid(squareSize, gameArea)
+      // function to get number of rows and columns
+      const [rows, cols] = getDimensions(window, squareSize)
+
+      // get blank gridData object (need to replace later)
+      Array.from(Array(rows).keys()).forEach(row => {
+        gridData[row] = []
+        // add individual cells
+        Array.from(Array(cols).keys()).forEach(col => {
+          gridData[row] = [...gridData[row], false]
+        })
+      })
+
+      // function to display data
+      plotGridData(gridData, gameArea, squareSize)
+    });
+
+    // button handlers
+    startButton.addEventListener('click', () => {
+      console.log(startButton.innerText, startButton.innerText === 'Start')
+      if (startButton.innerText === 'Start') {
+        startButton.innerText = 'Stop'
+        startButton.style.backgroundColor = '#de2b2b'
+        startSimulation(stepsPerSecond, stepButton)
+
+      } else {
+        startButton.innerText = 'Start'
+        startButton.style.backgroundColor = '#5c8b4c'
+        stopSimulation()
+
+      }
+    })
+
+    stepButton.addEventListener('click', () => {
+
+      let newGridData = {}
+
+      Object.keys(gridData).forEach(row => {
+        newGridData[row] = []
+        gridData[row].forEach((colValue, col) => {
+
+          // current cell value 
+          cellValue = gridData[row][col]
+
+          // get index of above and below rows, not the 
+          const rowAbove = row - 1 === - 1 ? Object.keys(gridData).length - 1 : row - 1
+          const rowBelow = parseInt(row) === Object.keys(gridData).length - 1 ? 0 : parseInt(row) + 1
+
+          const colLeft = col - 1 === -1 ? gridData[row].length - 1 : col - 1
+          const colRight = col === gridData[row].length - 1 ? 0 : parseInt(col) + 1
+
+          neighbors = [
+            gridData[rowAbove][colLeft],
+            gridData[rowAbove][col],
+            gridData[rowAbove][colRight],
+
+            gridData[row][colRight],
+            gridData[row][colLeft],
+
+            gridData[rowBelow][colLeft],
+            gridData[rowBelow][col],
+            gridData[rowBelow][colRight],
+          ]
+
+          const numTrue = neighbors.filter(val => {
+            return val
+          }).length
+
+          // #1: if live:  stay alive if 2 or 3 live neighbors
+          // #2: else: come alive if exactly 3 live neighbors
+          const newColValue = colValue
+            ? (numTrue === 2 || numTrue === 3)
+            : numTrue === 3
+
+          // add value to newGridData
+          newGridData[row] = [...newGridData[row], newColValue]
+        })
+      })
+      gridData = newGridData
+      plotGridData(gridData, gameArea, squareSize)
+    })
+
+    resetButton.addEventListener('click', () => {
+      // stop simulation
+      startButton.innerText = 'Start'
+      startButton.style.backgroundColor = '#5c8b4c'
+      stopSimulation()
+
+      gridData = {}
+
+      // get the number of rows and columns
+      const [rows, cols] = getDimensions(window, squareSize)
+
+      // get initial gridData object
+      Array.from(Array(rows).keys()).forEach(row => {
+        gridData[row] = []
+        // add individual cells
+        Array.from(Array(cols).keys()).forEach(col => {
+          gridData[row] = [...gridData[row], false]
+        })
+      })
+
+      plotGridData(gridData, gameArea, squareSize)
+    })
+
+    // listen for slider changes and update field
+    cellSizeSlider.oninput = function () {
+      cellSize.innerHTML = this.value;
+      squareSize = this.value
+
+      gridData = {}
+
+      // get the number of rows and columns
+      const [rows, cols] = getDimensions(window, squareSize)
+
+      // get initial gridData object
+      Array.from(Array(rows).keys()).forEach(row => {
+        gridData[row] = []
+        // add individual cells
+        Array.from(Array(cols).keys()).forEach(col => {
+          gridData[row] = [...gridData[row], false]
+        })
+      })
+
+      plotGridData(gridData, gameArea, squareSize)
+    };
+
+    // listen for slider changes and update field
+    stepSpeedSlider.oninput = function () {
+      stepSpeed.innerHTML = this.value;
+      stepsPerSecond = this.value
+      console.log(this.value)
+    };
+
+    // get updated year
+    const footerName = document.getElementById("footer-name");
+    const year = new Date().getFullYear();
+    footerName.innerText = `Garrett Roell ${year}`;
+
+  });
+
+</script>
+
+<body>
+  <div class="top-bar">
+    <div class="top-bar-content">
+      <h1>Conway's Game of Life</h1>
+      <div class="controls-area">
+        <div class="button-area">
+          <button id="start-button" class="button start-button">Start</button>
+          <button id="step-button" class="button step-button">Step</button>
+          <button id="reset-button" class="button reset-button">Reset</button>
+        </div>
+        <div class="slider-area">
+          <div class="cell-size-control">
+            <input type="range" min="3" max="200" value="20" id="pixels-per-cell-slider">
+            <div class="slider-row">
+              <p>pixels per cell:</p>
+              <p id="pixels-per-cell-value">20</p>
+            </div>
+          </div>
+          <div class="step-speed-control">
+            <input type="range" min="1" max="60" value="20" id="steps-per-second-slider">
+            <div class="slider-row">
+              <p>steps per second:</p>
+              <p id="steps-per-second-value">20</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-area" id="game-area"></div>
+
+  <div class="footer">
+    <div class="footer-container">
+      <a href="https://garrettroell.com" target="_blank" class="footer-link" id="footer-name"></a>
+      <a href="https://github.com/garrettroell/mandelbrot" target="_blank">
+        <button class="github-button">
+          <!-- github svg -->
+          <svg stroke="rgba(255, 255, 255, 0.70)" fill="none" stroke-width="2" viewBox="0 0 24 24"
+            stroke-linecap="round" stroke-linejoin="round" height="1.25em" width="1.25em"
+            xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22">
+            </path>
+          </svg>
+        </button>
+      </a>
+    </div>
+  </div>
+</body>
+
+</html>
